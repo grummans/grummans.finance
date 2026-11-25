@@ -18,6 +18,7 @@ internal data class Occurrence(
     val paidAmountVnd: Long,
     val remainingAmountVnd: Long,
     val status: String,
+    val isEstimate: Boolean,
 )
 
 internal data class Account(
@@ -61,6 +62,44 @@ internal data class TransactionDraft(
     val occurredAt: String,
     val categoryId: String?,
     val note: String?,
+)
+
+internal data class SalaryReceipt(
+    val id: String,
+    val amountVnd: Long,
+    val receivedOn: String,
+)
+
+internal data class BudgetSettings(val globalBufferVnd: Long, val globalBudgetVnd: Long?)
+
+internal data class BudgetCycle(
+    val start: String,
+    val end: String,
+    val daysRemaining: Int,
+    val projected: Boolean,
+)
+
+internal data class ForecastItem(
+    val obligationName: String,
+    val dueDate: String,
+    val remainingVnd: Long,
+    val certainty: String,
+    val overdue: Boolean,
+)
+
+internal data class BudgetSnapshot(
+    val cycle: BudgetCycle,
+    val cashOnHandVnd: Long,
+    val reservedConfirmedVnd: Long,
+    val reservedExpectedVnd: Long,
+    val globalBufferVnd: Long,
+    val globalBudgetVnd: Long?,
+    val spentInCycleVnd: Long,
+    val availableVnd: Long,
+    val spendableVnd: Long,
+    val dailyAllowanceVnd: Long,
+    val warnings: List<String>,
+    val forecast: List<ForecastItem>,
 )
 
 internal class FinanceApi(baseUrl: String) {
@@ -137,6 +176,28 @@ internal class FinanceApi(baseUrl: String) {
         return JSONObject(request("PATCH", "/api/v1/transactions/$transactionId", body, idempotencyKey)).toTransactionEntry()
     }
 
+    suspend fun getBudget(): BudgetSnapshot = JSONObject(request("GET", "/api/v1/budget/current")).toBudgetSnapshot()
+
+    suspend fun getBudgetSettings(): BudgetSettings =
+        JSONObject(request("GET", "/api/v1/budget/settings")).toBudgetSettings()
+
+    suspend fun updateBudgetSettings(globalBufferVnd: Long, globalBudgetVnd: Long?, idempotencyKey: String): BudgetSettings {
+        // an explicit null clears the total budget, so the field is always sent
+        val body = JSONObject()
+            .put("global_buffer_vnd", globalBufferVnd)
+            .put("global_budget_vnd", globalBudgetVnd ?: JSONObject.NULL)
+            .toString()
+        return JSONObject(request("PUT", "/api/v1/budget/settings", body, idempotencyKey)).toBudgetSettings()
+    }
+
+    suspend fun listSalaryReceipts(): List<SalaryReceipt> =
+        parseItems(request("GET", "/api/v1/salary-receipts"), "receipts").map(JSONObject::toSalaryReceipt)
+
+    suspend fun recordSalaryReceipt(amountVnd: Long, receivedOn: String, idempotencyKey: String): SalaryReceipt {
+        val body = JSONObject().put("amount_vnd", amountVnd).put("received_on", receivedOn).toString()
+        return JSONObject(request("POST", "/api/v1/salary-receipts", body, idempotencyKey)).toSalaryReceipt()
+    }
+
     private suspend fun request(method: String, path: String, body: String? = null, idempotencyKey: String? = null): String = withContext(Dispatchers.IO) {
         val connection = (URL(baseUrl + path).openConnection() as HttpURLConnection).apply {
             requestMethod = method
@@ -181,6 +242,7 @@ private fun String.toOccurrence(): Occurrence {
         paidAmountVnd = value.getLong("paid_amount_vnd"),
         remainingAmountVnd = value.getLong("remaining_amount_vnd"),
         status = value.getString("status"),
+        isEstimate = value.optBoolean("is_estimate", false),
     )
 }
 
@@ -218,4 +280,48 @@ internal fun JSONObject.toTransactionEntry() = TransactionEntry(
     categoryName = optionalString("category_name"),
     note = optionalString("note"),
     transferId = optionalString("transfer_id"),
+)
+
+internal fun JSONObject.toSalaryReceipt() = SalaryReceipt(
+    id = getString("id"),
+    amountVnd = getLong("amount_vnd"),
+    receivedOn = getString("received_on"),
+)
+
+internal fun JSONObject.toBudgetSettings() = BudgetSettings(
+    globalBufferVnd = getLong("global_buffer_vnd"),
+    globalBudgetVnd = if (isNull("global_budget_vnd")) null else getLong("global_budget_vnd"),
+)
+
+internal fun JSONObject.toBudgetSnapshot(): BudgetSnapshot {
+    val cycle = getJSONObject("cycle")
+    val warnings = optJSONArray("warnings") ?: JSONArray()
+    val forecast = optJSONArray("forecast") ?: JSONArray()
+    return BudgetSnapshot(
+        cycle = BudgetCycle(
+            start = cycle.getString("start"),
+            end = cycle.getString("end"),
+            daysRemaining = cycle.getInt("days_remaining"),
+            projected = cycle.getBoolean("projected"),
+        ),
+        cashOnHandVnd = getLong("cash_on_hand_vnd"),
+        reservedConfirmedVnd = getLong("reserved_confirmed_vnd"),
+        reservedExpectedVnd = getLong("reserved_expected_vnd"),
+        globalBufferVnd = getLong("global_buffer_vnd"),
+        globalBudgetVnd = if (isNull("global_budget_vnd")) null else getLong("global_budget_vnd"),
+        spentInCycleVnd = getLong("spent_in_cycle_vnd"),
+        availableVnd = getLong("available_vnd"),
+        spendableVnd = getLong("spendable_vnd"),
+        dailyAllowanceVnd = getLong("daily_allowance_vnd"),
+        warnings = (0 until warnings.length()).map { warnings.getString(it) },
+        forecast = (0 until forecast.length()).map { forecast.getJSONObject(it).toForecastItem() },
+    )
+}
+
+private fun JSONObject.toForecastItem() = ForecastItem(
+    obligationName = getString("obligation_name"),
+    dueDate = getString("due_date"),
+    remainingVnd = getLong("remaining_vnd"),
+    certainty = getString("certainty"),
+    overdue = getBoolean("overdue"),
 )

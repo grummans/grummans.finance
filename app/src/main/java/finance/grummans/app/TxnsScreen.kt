@@ -34,6 +34,7 @@ import finance.grummans.app.ui.TuiPanel
 import finance.grummans.app.ui.TuiRow
 import finance.grummans.app.ui.TuiTabs
 import finance.grummans.app.ui.Yellow
+import finance.grummans.app.ui.amountOrNull
 import finance.grummans.app.ui.money
 import finance.grummans.app.ui.stamp
 import finance.grummans.app.ui.tuiStyle
@@ -189,7 +190,7 @@ private fun NewTransaction(txns: TxnsViewModel, onDone: () -> Unit) {
     val target = txns.accounts.firstOrNull { it.id == toAccountId }
     val category = txns.categories.firstOrNull { it.id == categoryId }
     val isTransfer = type == "TRANSFER"
-    val value = amount.filter(Char::isDigit).toLongOrNull()
+    val value = amountOrNull(amount)
     val valid = value != null && value > 0 && account != null &&
         (!isTransfer || (target != null && target.id != account.id)) && !txns.loading
 

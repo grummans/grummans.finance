@@ -68,6 +68,17 @@ private val BUSINESS_DATE = ZoneId.of("Asia/Ho_Chi_Minh")
 /** `3.700.000₫` — dot grouping, no space before the currency sign. */
 fun money(amount: Long): String = "${VND.format(amount)}₫"
 
+// An amount is read as typed: a digit filter would turn "-100" into 100 and a
+// number beyond Long into 0, so an invalid entry has to stay invalid. Only whole
+// VND are accepted, written plainly or with dot grouping as the fields show them.
+private val AMOUNT_INPUT = Regex("""^\d+(?:\.\d{3})*$""")
+
+fun amountOrNull(text: String): Long? {
+    val trimmed = text.trim()
+    if (!AMOUNT_INPUT.matches(trimmed)) return null
+    return trimmed.replace(".", "").toLongOrNull()
+}
+
 fun signedMoney(amount: Long, outgoing: Boolean): String = (if (outgoing) "-" else "+") + money(amount)
 
 /** `1.200.000` for input fields. */
