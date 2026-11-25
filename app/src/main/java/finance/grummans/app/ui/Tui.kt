@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -299,13 +302,15 @@ fun TuiDialog(title: String, onDismiss: () -> Unit, content: @Composable () -> U
         Column(
             Modifier
                 .fillMaxWidth()
+                .heightIn(max = 560.dp)
                 .background(Panel, RoundedCornerShape(10.dp))
                 .border(1.dp, Border, RoundedCornerShape(10.dp))
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("[ $title ]", style = tuiStyle(12, FontWeight.Medium, Yellow))
-            content()
+            // a long option list must scroll inside the dialog, never overflow the screen
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) { content() }
         }
     }
 }

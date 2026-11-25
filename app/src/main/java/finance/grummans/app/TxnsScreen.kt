@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import finance.grummans.app.ui.Cream
 import finance.grummans.app.ui.Green
@@ -120,11 +121,15 @@ private fun TransactionCard(entry: TransactionEntry, onClick: () -> Unit) {
                 Text(
                     title,
                     style = tuiStyle(14, FontWeight.Bold, Cream),
-                    modifier = Modifier.weight(1f).padding(end = 8.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp),
                 )
                 Text(
                     if (entry.direction == "OUT") "-${money(entry.amountVnd)}" else "+${money(entry.amountVnd)}",
                     style = tuiStyle(14, FontWeight.Medium, Cream),
+                    maxLines = 1,
+                    softWrap = false,
                 )
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
