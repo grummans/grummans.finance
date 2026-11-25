@@ -189,7 +189,8 @@ fun TuiInput(label: String, value: String, onValueChange: (String) -> Unit, help
                     }
                 },
             )
-            Text(helper, style = tuiStyle(11, color = Muted))
+            // the caption would repeat the placeholder, so it appears only once the field has text
+            if (value.isNotEmpty()) Text(helper, style = tuiStyle(11, color = Muted))
         }
     }
 }

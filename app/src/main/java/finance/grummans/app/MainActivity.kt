@@ -94,7 +94,11 @@ private fun TerminalFinanceApp(
     Row(Modifier.fillMaxSize().background(Charcoal).statusBarsPadding().navigationBarsPadding()) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
             TuiTopBar(path)
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            // bottom padding keeps the last button clear of the navigation bar
+            Column(
+                Modifier.weight(1f).padding(bottom = 14.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
                 when (tab) {
                     "TXNS" -> TxnsRoutes(txns, txnsRoute) { txnsRoute = it }
                     "BILLS" -> BillsRoutes(bills, billsRoute, { billsRoute = it }, {

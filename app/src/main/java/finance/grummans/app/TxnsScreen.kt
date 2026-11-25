@@ -90,7 +90,7 @@ private fun Timeline(txns: TxnsViewModel, onNewTransaction: () -> Unit, onOpenLo
         TuiButton("FILTER", primary = false, onClick = { filtering = true })
     }
 
-    TuiGreenButton("+ ADD TRANSACTION", onClick = onNewTransaction)
+    TuiButton("+ ADD TRANSACTION", onClick = onNewTransaction)
 
     if (filtering) {
         FilterDialog(txns, onDismiss = { filtering = false })
