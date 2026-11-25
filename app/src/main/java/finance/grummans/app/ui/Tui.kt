@@ -20,6 +20,11 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,6 +34,8 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -171,12 +178,26 @@ fun TuiRow(label: String, value: String, valueColor: Color = Cream, modifier: Mo
 
 @Composable
 fun TuiInput(label: String, value: String, onValueChange: (String) -> Unit, helper: String, numeric: Boolean = false) {
+    // a money field stores digits and only groups them for display, so a caller never
+    // has to strip separators before parsing. The field keeps its own buffer because a
+    // value derived from the caller's state on every recomposition drops keystrokes
+    // when input arrives faster than the frame.
+    var field by remember { mutableStateOf(TextFieldValue(displayText(value, numeric), TextRange(displayText(value, numeric).length))) }
+    LaunchedEffect(value, numeric) {
+        val shown = displayText(value, numeric)
+        if (field.text != shown) field = TextFieldValue(shown, TextRange(shown.length))
+    }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TuiCard {
             Text(label.uppercase(Locale.ENGLISH), style = tuiStyle(11, color = Muted))
             BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
+                value = field,
+                onValueChange = { typed ->
+                    val digits = if (numeric) typed.text.filter(Char::isDigit) else typed.text
+                    val shown = displayText(digits, numeric)
+                    field = TextFieldValue(shown, TextRange(shown.length))
+                    onValueChange(digits)
+                },
                 singleLine = true,
                 textStyle = tuiStyle(20, FontWeight.Bold, Cream),
                 cursorBrush = SolidColor(Yellow),
@@ -184,7 +205,7 @@ fun TuiInput(label: String, value: String, onValueChange: (String) -> Unit, help
                 modifier = Modifier.fillMaxWidth(),
                 decorationBox = { inner ->
                     Box {
-                        if (value.isEmpty()) Text(helper, style = tuiStyle(13, color = Muted.copy(alpha = 0.7f)))
+                        if (field.text.isEmpty()) Text(helper, style = tuiStyle(13, color = Muted.copy(alpha = 0.7f)))
                         inner()
                     }
                 },
@@ -193,6 +214,17 @@ fun TuiInput(label: String, value: String, onValueChange: (String) -> Unit, help
             if (value.isNotEmpty()) Text(helper, style = tuiStyle(11, color = Muted))
         }
     }
+}
+
+
+/** The text a field shows: digits grouped as money, or the raw text. */
+private fun displayText(value: String, numeric: Boolean): String = if (numeric) groupDigits(value) else value
+
+/** `2000000` -> `2.000.000`; stays string-only so an overlong paste cannot overflow. */
+private fun groupDigits(digits: String): String {
+    val cleaned = digits.filter(Char::isDigit).trimStart('0').take(18)
+    if (cleaned.isEmpty()) return if (digits.any(Char::isDigit)) "0" else ""
+    return plainAmount(cleaned.toLong())
 }
 
 /** `[██████░░░░] 68%` */
