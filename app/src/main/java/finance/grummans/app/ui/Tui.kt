@@ -310,7 +310,10 @@ fun TuiDialog(title: String, onDismiss: () -> Unit, content: @Composable () -> U
         ) {
             Text("[ $title ]", style = tuiStyle(12, FontWeight.Medium, Yellow))
             // a long option list must scroll inside the dialog, never overflow the screen
-            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) { content() }
+            Column(
+                Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) { content() }
         }
     }
 }
